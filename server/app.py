@@ -18,23 +18,23 @@ api = Api(app)
 
 
 class Plants(Resource):
-
+    
     def get(self):
         plants = [plant.to_dict() for plant in Plant.query.all()]
         return make_response(jsonify(plants), 200)
-
+    
     def post(self):
         data = request.get_json()
-
+        
         new_plant = Plant(
             name=data['name'],
             image=data['image'],
             price=data['price'],
         )
-
+        
         db.session.add(new_plant)
         db.session.commit()
-
+        
         return make_response(new_plant.to_dict(), 201)
 
 
@@ -42,10 +42,49 @@ api.add_resource(Plants, '/plants')
 
 
 class PlantByID(Resource):
-
+    
     def get(self, id):
-        plant = Plant.query.filter_by(id=id).first().to_dict()
-        return make_response(jsonify(plant), 200)
+        plant = Plant.query.filter_by(id=id).first()
+        if not plant:
+            return make_response(jsonify({"error": "Plant not found"}), 404)
+        return make_response(jsonify(plant.to_dict()), 200)
+    
+    def patch(self, id):
+        # Get the plant by ID
+        plant = Plant.query.filter_by(id=id).first()
+        
+        # Check if plant exists
+        if not plant:
+            return make_response(jsonify({"error": "Plant not found"}), 404)
+        
+        # Get the request data
+        data = request.get_json()
+        
+        # Update plant attributes that are provided in the request
+        for attr in data:
+            if hasattr(plant, attr):
+                setattr(plant, attr, data[attr])
+        
+        # Save changes to database
+        db.session.commit()
+        
+        # Return updated plant
+        return make_response(jsonify(plant.to_dict()), 200)
+    
+    def delete(self, id):
+        # Get the plant by ID
+        plant = Plant.query.filter_by(id=id).first()
+        
+        # Check if plant exists
+        if not plant:
+            return make_response(jsonify({"error": "Plant not found"}), 404)
+        
+        # Delete the plant
+        db.session.delete(plant)
+        db.session.commit()
+        
+        # Return empty response with 204 status
+        return "", 204
 
 
 api.add_resource(PlantByID, '/plants/<int:id>')
